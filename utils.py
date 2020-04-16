@@ -1,5 +1,5 @@
 from scipy import misc
-import os, cv2, torch
+import os, torch
 import numpy as np
 
 def load_test_data(image_path, size=256):
@@ -41,14 +41,6 @@ def check_folder(log_dir):
 def str2bool(x):
     return x.lower() in ('true')
 
-def cam(x, size = 256):
-    x = x - np.min(x)
-    cam_img = x / np.max(x)
-    cam_img = np.uint8(255 * cam_img)
-    cam_img = cv2.resize(cam_img, (size, size))
-    cam_img = cv2.applyColorMap(cam_img, cv2.COLORMAP_JET)
-    return cam_img / 255.0
-
 def imagenet_norm(x):
     mean = [0.485, 0.456, 0.406]
     std = [0.299, 0.224, 0.225]
@@ -61,6 +53,3 @@ def denorm(x):
 
 def tensor2numpy(x):
     return x.detach().cpu().numpy().transpose(1,2,0)
-
-def RGB2BGR(x):
-    return cv2.cvtColor(x, cv2.COLOR_RGB2BGR)
