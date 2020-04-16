@@ -48,12 +48,6 @@ class UGATIT(object) :
         self.benchmark_flag = args.benchmark_flag
         self.resume = args.resume
 
-        if torch.backends.cudnn.enabled and self.benchmark_flag:
-            print('set benchmark !')
-            torch.backends.cudnn.benchmark = True
-
-        print()
-
         print("##### Information #####")
         print("# light : ", self.light)
         print("# dataset : ", self.dataset)
