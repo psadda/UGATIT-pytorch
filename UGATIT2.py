@@ -6,13 +6,13 @@ from networks import *
 from utils import *
 from glob import glob
 
-class UGATIT(object) :
+class UGATIT(object):
     def __init__(self, args):
         self.light = args.light
 
-        if self.light :
+        if self.light:
             self.model_name = 'UGATIT_light'
-        else :
+        else:
             self.model_name = 'UGATIT'
 
         self.result_dir = args.result_dir
@@ -29,16 +29,16 @@ class UGATIT(object) :
         self.weight_decay = args.weight_decay
         self.ch = args.ch
 
-        """ Weight """
+        # Weight
         self.adv_weight = args.adv_weight
         self.cycle_weight = args.cycle_weight
         self.identity_weight = args.identity_weight
         self.cam_weight = args.cam_weight
 
-        """ Generator """
+        # Generator
         self.n_res = args.n_res
 
-        """ Discriminator """
+        # Discriminator
         self.n_dis = args.n_dis
 
         self.img_size = args.img_size
@@ -48,36 +48,31 @@ class UGATIT(object) :
         self.benchmark_flag = args.benchmark_flag
         self.resume = args.resume
 
-        print("##### Information #####")
-        print("# light : ", self.light)
-        print("# dataset : ", self.dataset)
-        print("# batch_size : ", self.batch_size)
-        print("# iteration per epoch : ", self.iteration)
+        print("##### Parameters #####")
+        print("# light:", self.light)
+        print("# dataset:", self.dataset)
+        print("# batch_size:", self.batch_size)
+        print("# iteration per epoch:", self.iteration)
 
         print()
 
         print("##### Generator #####")
-        print("# residual blocks : ", self.n_res)
+        print("# residual blocks:", self.n_res)
 
         print()
 
         print("##### Discriminator #####")
-        print("# discriminator layer : ", self.n_dis)
+        print("# discriminator layer:", self.n_dis)
 
         print()
 
         print("##### Weight #####")
-        print("# adv_weight : ", self.adv_weight)
-        print("# cycle_weight : ", self.cycle_weight)
-        print("# identity_weight : ", self.identity_weight)
-        print("# cam_weight : ", self.cam_weight)
+        print("# adv_weight:", self.adv_weight)
+        print("# cycle_weight:", self.cycle_weight)
+        print("# identity_weight:", self.identity_weight)
+        print("# cam_weight:", self.cam_weight)
 
-    ##################################################################################
-    # Model
-    ##################################################################################
-
-    def build_model(self):
-        """ DataLoader """
+        # DataLoader
         train_transform = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.Resize((self.img_size + 30, self.img_size+30)),
@@ -100,7 +95,7 @@ class UGATIT(object) :
         self.testA_loader = DataLoader(self.testA, batch_size=1, shuffle=False)
         self.testB_loader = DataLoader(self.testB, batch_size=1, shuffle=False)
 
-        """ Define Generator, Discriminator """
+        # Define Generator, Discriminator
         self.genA2B = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
         self.genB2A = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
         self.disGA = Discriminator(input_nc=3, ndf=self.ch, n_layers=7).to(self.device)
@@ -108,16 +103,16 @@ class UGATIT(object) :
         self.disLA = Discriminator(input_nc=3, ndf=self.ch, n_layers=5).to(self.device)
         self.disLB = Discriminator(input_nc=3, ndf=self.ch, n_layers=5).to(self.device)
 
-        """ Define Loss """
+        # Define Loss
         self.L1_loss = nn.L1Loss().to(self.device)
         self.MSE_loss = nn.MSELoss().to(self.device)
         self.BCE_loss = nn.BCEWithLogitsLoss().to(self.device)
 
-        """ Trainer """
+        # Trainer
         self.G_optim = torch.optim.Adam(itertools.chain(self.genA2B.parameters(), self.genB2A.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
         self.D_optim = torch.optim.Adam(itertools.chain(self.disGA.parameters(), self.disGB.parameters(), self.disLA.parameters(), self.disLB.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
 
-        """ Define Rho clipper to constraint the value of rho in AdaILN and ILN"""
+        # Define Rho clipper to constraint the value of rho in AdaILN and ILN
         self.Rho_clipper = RhoClipper(0, 1)
 
     def train(self):
@@ -136,7 +131,6 @@ class UGATIT(object) :
                     self.D_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2)) * (start_iter - self.iteration // 2)
 
         # training loop
-        print('training start !')
         start_time = time.time()
         for step in range(start_iter, self.iteration + 1):
             if self.decay_flag and step > (self.iteration // 2):
@@ -371,11 +365,8 @@ class UGATIT(object) :
         self.genA2B.eval(), self.genB2A.eval()
         for n, (real_A, _) in enumerate(self.testA_loader):
             real_A = real_A.to(self.device)
-
             fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A)
-
             fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B)
-
             fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A)
 
             A2B = np.concatenate((RGB2BGR(tensor2numpy(denorm(real_A[0]))),
@@ -390,11 +381,8 @@ class UGATIT(object) :
 
         for n, (real_B, _) in enumerate(self.testB_loader):
             real_B = real_B.to(self.device)
-
             fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B)
-
             fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A)
-
             fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B)
 
             B2A = np.concatenate((RGB2BGR(tensor2numpy(denorm(real_B[0]))),
